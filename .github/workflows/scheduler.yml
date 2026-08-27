@@ -1,0 +1,42 @@
+# ============================================================
+# PC Mission scheduler tick — free 10-minute heartbeat.
+#
+# Vercel's Hobby plan only allows DAILY cron jobs, so the
+# frequent scheduler heartbeat runs here on GitHub Actions
+# (free tier, every 10 minutes). It calls the same protected
+# endpoint Vercel's own cron uses; the endpoint is guarded by
+# a Bearer token (CRON_SECRET) and every tick is idempotent
+# (row locks + idempotency keys), so extra ticks are harmless.
+#
+# Setup: in the GitHub repo → Settings → Secrets and variables
+# → Actions, add two repository secrets:
+#   APP_URL       e.g. https://your-app.vercel.app
+#   CRON_SECRET   the same value you set in Vercel env vars
+# ============================================================
+name: scheduler-tick
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger PC Mission scheduler
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Set APP_URL and CRON_SECRET repository secrets (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          echo "Ticking $APP_URL/api/cron/tick ..."
+          curl -fsS --retry 3 --retry-delay 5 \
+            -X POST "$APP_URL/api/cron/tick" \
+            -H "Authorization: Bearer $CRON_SECRET"
+          echo ""
+          echo "Tick complete."

@@ -439,17 +439,27 @@ export async function runSchedulerTick(workerId = 'worker'): Promise<{ claimed: 
   }
 
   // Atomic claim: never process the same action twice across workers.
+  // Picks up:
+  //  - pending actions that are due (and past their retry backoff), and
+  //  - 'locked' actions abandoned by a killed serverless/worker tick
+  //    (locked more than 5 minutes ago with no outcome recorded).
+  // FOR UPDATE SKIP LOCKED guarantees a single processor per action.
+  const batchSize = workerId === 'cron' ? 8 : 15;
   const rows = await db.execute(sql`
     UPDATE scheduled_actions
     SET status = 'locked', locked_at = now(), locked_by = ${workerId},
         attempts = attempts + 1, updated_at = now()
     WHERE id IN (
       SELECT id FROM scheduled_actions
-      WHERE status = 'pending'
-        AND scheduled_at <= now()
-        AND (next_retry_at IS NULL OR next_retry_at <= now())
+      WHERE (
+          (status = 'pending'
+            AND scheduled_at <= now()
+            AND (next_retry_at IS NULL OR next_retry_at <= now()))
+          OR
+          (status = 'locked' AND locked_at < now() - interval '5 minutes')
+        )
       ORDER BY scheduled_at
-      LIMIT 15
+      LIMIT ${sql.raw(String(batchSize))}
       FOR UPDATE SKIP LOCKED
     )
     RETURNING *

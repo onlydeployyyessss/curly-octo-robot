@@ -115,15 +115,29 @@ runs against an interactive in-memory demo dataset.
    - builds the React app (`apps/web/dist`),
    - bundles `api/index.ts` as a serverless function,
    - rewrites `/api/*` → the function, everything else → SPA,
-   - runs **Vercel Cron** `*/10 * * * *` against `/api/cron/tick`.
+   - runs a daily **Vercel Cron** safety net against `/api/cron/tick` (Hobby-compatible),
+     while a free **GitHub Actions** workflow (`*/10 * * * *`) provides the frequent tick —
+     see step 6.
 3. Add a **Postgres** database (Vercel Postgres/Neon) and set `DATABASE_URL`.
 4. Set all environment variables above (the Postgres integration sets `DATABASE_URL` for you).
 5. Migrations run automatically during build (`npm run db:migrate`).
-6. Register the Telegram webhook once:
+6. **Enable the scheduler heartbeat** — Vercel *Hobby* plans only allow **daily** cron jobs,
+   so the frequent tick runs via a free **GitHub Actions** workflow included in the repo
+   (`.github/workflows/scheduler.yml`, every 10 minutes). Add two repository secrets under
+   **GitHub repo → Settings → Secrets and variables → Actions**:
+   - `APP_URL` → e.g. `https://your-app.vercel.app`
+   - `CRON_SECRET` → the same value you set in Vercel
+
+   The action pings `POST /api/cron/tick` with the bearer token. Every tick is idempotent
+   (row-level locks + idempotency keys), and stale locks from killed serverless runs are
+   reclaimed automatically after 5 minutes — so overlapping or delayed ticks are harmless.
+   The daily Vercel cron (`vercel.json`) acts as an additional safety net. On Vercel **Pro**
+   you can instead change its schedule to `*/10 * * * *` and delete the workflow.
+7. Register the Telegram webhook once:
    ```bash
    npm run telegram:webhook -- https://your-app.vercel.app
    ```
-7. Configure the Meta webhook (App Dashboard → Webhooks → Instagram):
+8. Configure the Meta webhook (App Dashboard → Webhooks → Instagram):
    - Callback URL: `https://your-app.vercel.app/api/webhooks/meta`
    - Verify token: value of `META_WEBHOOK_VERIFY`
    - Subscribe to `messages` (Instagram Messaging) and `comments`.
