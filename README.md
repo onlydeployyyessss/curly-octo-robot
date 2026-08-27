@@ -111,13 +111,15 @@ runs against an interactive in-memory demo dataset.
 ## Deploy to Vercel (web app + API + Telegram bot)
 
 1. Push this repository to GitHub and import it in Vercel.
-2. Vercel auto-detects the config (`vercel.json`):
-   - builds the React app (`apps/web/dist`),
-   - bundles `api/index.ts` as a serverless function,
-   - rewrites `/api/*` → the function, everything else → SPA,
-   - runs a daily **Vercel Cron** safety net against `/api/cron/tick` (Hobby-compatible),
-     while a free **GitHub Actions** workflow (`*/10 * * * *`) provides the frequent tick —
-     see step 6.
+2. Vercel auto-detects the config (`vercel.json`). The build (`npm run vercel:build`)
+   typechecks and builds all packages, then **bundles the API to a self-contained CJS lambda**
+   (`api/index.js` → `api/_bundle/handler.cjs`, via esbuild) — the workspace `@pc/shared` code
+   is inlined, so the serverless function never depends on monorepo symlink resolution while
+   npm dependencies stay external and are traced automatically — then runs migrations.
+   - React static output: `apps/web/dist`
+   - Rewrites: `/api/*` → lambda, everything else → SPA
+   - Daily **Vercel Cron** safety net (Hobby-compatible) hitting `/api/cron/tick`; the frequent
+     heartbeat comes from a free **GitHub Actions** workflow (`*/10 * * * *`) — see step 6.
 3. Add a **Postgres** database (Vercel Postgres/Neon) and set `DATABASE_URL`.
 4. Set all environment variables above (the Postgres integration sets `DATABASE_URL` for you).
 5. Migrations run automatically during build (`npm run db:migrate`).

@@ -11,3 +11,6 @@ build/
 .vscode/
 coverage/
 drizzle/meta/_journal.tmp
+
+# Generated Vercel lambda bundle (produced during build)
+api/_bundle/
