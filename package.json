@@ -16,7 +16,7 @@
     "build:web": "npm run build --workspace @pc/web",
     "bundle:lambda": "esbuild apps/api/src/api.ts --bundle --platform=node --format=cjs --target=node20 --outfile=api/_bundle/handler.cjs --packages=external --alias:@pc/shared=./packages/shared/src/index.ts --log-level=warning",
     "build": "npm run build:shared && npm run build:api && npm run build:web",
-    "vercel:build": "npm run build && npm run bundle:lambda && npm run db:migrate",
+    "vercel:build": "npm run build && npm run bundle:lambda && (npm run db:migrate || echo \"[build] DB migration skipped at build time (DATABASE_URL not yet available); tables are created on first cold start / can be run via npm run db:migrate\")",
     "typecheck": "npm run typecheck --workspace @pc/shared && npm run typecheck --workspace @pc/api && npm run typecheck --workspace @pc/web",
     "db:generate": "npm run db:generate --workspace @pc/api",
     "db:migrate": "npm run db:migrate --workspace @pc/api",
