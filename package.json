@@ -1,0 +1,33 @@
+{
+  "name": "pc-mission",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PC Mission — multi-day Instagram creator outreach campaign manager with AI personalization, official Meta APIs, and Telegram reporting.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @pc/web",
+    "dev:api": "npm run dev --workspace @pc/api",
+    "dev": "concurrently -n web,api -c magenta,cyan \"npm:dev:web\" \"npm:dev:api\"",
+    "build:shared": "npm run build --workspace @pc/shared",
+    "build:api": "npm run build --workspace @pc/api",
+    "build:web": "npm run build --workspace @pc/web",
+    "build": "npm run build:shared && npm run build:api && npm run build:web",
+    "typecheck": "npm run typecheck --workspace @pc/shared && npm run typecheck --workspace @pc/api && npm run typecheck --workspace @pc/web",
+    "db:generate": "npm run db:generate --workspace @pc/api",
+    "db:migrate": "npm run db:migrate --workspace @pc/api",
+    "db:seed": "npm run db:seed --workspace @pc/api",
+    "worker": "npm run worker --workspace @pc/api",
+    "telegram:webhook": "npm run telegram:webhook --workspace @pc/api",
+    "start": "npm run start --workspace @pc/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
